@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="video-section">
+    <div class="video-container">
+        <img src="{{ url_for('video_feed') }}" alt="Live Feed" class="video-feed">
+        <div class="scan-overlay"></div>
+        <div class="corner-bracket top-left"></div>
+        <div class="corner-bracket top-right"></div>
+        <div class="corner-bracket bottom-left"></div>
+        <div class="corner-bracket bottom-right"></div>
+    </div>
+</div>
+
+<div class="info-panel">
+    <div class="panel-card">
+        <h3><i class="fa-solid fa-circle-info"></i> System Status</h3>
+        <div class="status-list">
+            <div class="status-item">
+                <span class="label">Camera</span>
+                <span class="value active">Connected</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Detection</span>
+                <span class="value active">Running</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Database</span>
+                <span class="value" id="dbStatus">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-card">
+        <h3><i class="fa-solid fa-microchip"></i> Instructions</h3>
+        <p>Ensure the subject is facing the camera. The system will automatically detect masked faces and attempt
+            reconstruction.</p>
+    </div>
+</div>
+{% endblock %}

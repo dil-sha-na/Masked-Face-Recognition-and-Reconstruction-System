@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="photo-container">
+    <div class="panel-card full-width">
+        <h3><i class="fa-solid fa-camera-retro"></i> Photo Detection</h3>
+        <p>Capture a photo to detect and reconstruct masked faces instantly.</p>
+
+        <div class="photo-workflow">
+            <!-- Capture Section -->
+            <div class="capture-section">
+                <div class="camera-feed-container">
+                    <video id="webcam" autoplay playsinline></video>
+                </div>
+                <div class="capture-controls">
+                    <button id="startCameraBtn" class="btn btn-secondary">
+                        <i class="fa-solid fa-video"></i> Start Camera
+                    </button>
+                    <button id="captureDetectBtn" class="btn btn-primary" disabled>
+                        <i class="fa-solid fa-bolt"></i> Capture & Detect
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="result-section hidden" id="resultSection">
+                <h4>Detection Result</h4>
+                <div class="result-image-container">
+                    <img id="resultImage" src="" alt="Processed Result">
+                </div>
+                <button id="retryBtn" class="btn btn-secondary">
+                    <i class="fa-solid fa-rotate-right"></i> Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loader"></div>
+    <p>Processing Image...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Stop server camera to free up resource
+        try {
+            await fetch('/stop_camera');
+        } catch (e) {
+            console.error("Failed to stop server camera", e);
+        }
+
+        const webcam = document.getElementById('webcam');
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const captureDetectBtn = document.getElementById('captureDetectBtn');
+        const resultSection = document.getElementById('resultSection');
+        const resultImage = document.getElementById('resultImage');
+        const retryBtn = document.getElementById('retryBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        let stream = null;
+
+        // Start Camera
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                webcam.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                captureDetectBtn.disabled = false;
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Could not access webcam. Please allow permissions.");
+            }
+        });
+
+        // Capture & Detect
+        captureDetectBtn.addEventListener('click', async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = webcam.videoWidth;
+            canvas.height = webcam.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(webcam, 0, 0);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/detect_photo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultImage.src = data.image;
+                    resultSection.classList.remove('hidden');
+                    // Scroll to result
+                    resultSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing.');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        // Retry
+        retryBtn.addEventListener('click', () => {
+            resultSection.classList.add('hidden');
+            resultImage.src = "";
+        });
+    });
+</script>
+{% endblock %}

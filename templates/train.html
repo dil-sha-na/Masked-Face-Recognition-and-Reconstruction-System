@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="train-container">
+    <!-- Step 1: Data Collection -->
+    <div class="panel-card full-width">
+        <h3><i class="fa-solid fa-camera"></i> Step 1: Data Collection</h3>
+        <p>Enter the person's name and capture at least 5 photos from different angles.</p>
+
+        <div class="collection-form">
+            <div class="input-group">
+                <input type="text" id="personName" placeholder="Enter Person Name" class="input-field">
+            </div>
+
+            <div class="capture-area">
+                <div class="camera-feed-container">
+                    <video id="webcam" autoplay playsinline></video>
+                </div>
+                <div class="capture-controls">
+                    <button id="startCameraBtn" class="btn btn-secondary">
+                        <i class="fa-solid fa-video"></i> Start Camera
+                    </button>
+                    <button id="captureBtn" class="btn btn-primary" disabled>
+                        <i class="fa-solid fa-camera"></i> Capture Photo
+                    </button>
+                </div>
+            </div>
+
+            <div class="gallery-area">
+                <h4>Captured Photos (<span id="photoCount">0</span>)</h4>
+                <div id="captureGallery" class="capture-gallery"></div>
+            </div>
+
+            <div class="reset-area">
+                <button id="resetDataBtn" class="btn btn-danger">
+                    <i class="fa-solid fa-trash"></i> Reset All Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Training -->
+    <div class="panel-card full-width">
+        <h3><i class="fa-solid fa-brain"></i> Step 2: Training</h3>
+        <p>Once you have collected enough data, click the button below to train the model.</p>
+
+        <div class="train-actions">
+            <button id="trainBtn" class="btn btn-success btn-large">
+                <i class="fa-solid fa-play"></i> Train Model
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loader"></div>
+    <p id="loadingText">Processing...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Stop server camera to free up resource for browser
+        try {
+            await fetch('/stop_camera');
+        } catch (e) {
+            console.error("Failed to stop server camera", e);
+        }
+
+        const webcam = document.getElementById('webcam');
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const personNameInput = document.getElementById('personName');
+        const captureGallery = document.getElementById('captureGallery');
+        const photoCountSpan = document.getElementById('photoCount');
+        const trainBtn = document.getElementById('trainBtn');
+        const resetDataBtn = document.getElementById('resetDataBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+
+        let stream = null;
+        let photoCount = 0;
+
+        // Start Camera
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                webcam.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                captureBtn.disabled = false;
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Could not access webcam. Please allow permissions.");
+            }
+        });
+
+        // Capture Photo
+        captureBtn.addEventListener('click', async () => {
+            const name = personNameInput.value.trim();
+            if (!name) {
+                alert("Please enter a name first.");
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = webcam.videoWidth;
+            canvas.height = webcam.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(webcam, 0, 0);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            // Show thumbnail
+            const img = document.createElement('img');
+            img.src = imageData;
+            img.className = 'gallery-thumb';
+            captureGallery.appendChild(img);
+
+            photoCount++;
+            photoCountSpan.textContent = photoCount;
+
+            // Send to server
+            try {
+                const response = await fetch('/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, image: imageData })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to save image.");
+            }
+        });
+
+        // Train Model
+        trainBtn.addEventListener('click', async () => {
+            // Disable button immediately
+            trainBtn.disabled = true;
+
+            loadingText.textContent = "Training Model...";
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/train', { method: 'POST' });
+                const data = await response.json();
+
+                if (response.status === 429) {
+                    alert("Training is already in progress. Please wait.");
+                } else if (response.ok) {
+                    alert(data.message);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while training.');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+                trainBtn.disabled = false;
+            }
+        });
+
+        // Reset Data
+        resetDataBtn.addEventListener('click', async () => {
+            if (!confirm("Are you sure? This will DELETE ALL images and the trained model.")) return;
+
+            loadingText.textContent = "Resetting Data...";
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/reset_data', { method: 'POST' });
+                const data = await response.json();
+                alert(data.message);
+                captureGallery.innerHTML = '';
+                photoCount = 0;
+                photoCountSpan.textContent = 0;
+                personNameInput.value = '';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while resetting data.');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dataset-container">
+    <div class="panel-card full-width">
+        <h3><i class="fa-solid fa-database"></i> Dataset Library</h3>
+        <p>View and manage the training images. Images are grouped by identity.</p>
+
+        <div id="datasetGroups" class="dataset-groups">
+            <!-- Groups will be loaded here -->
+            <div class="empty-state">Loading library...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Stop server camera to free up resource
+        try {
+            await fetch('/stop_camera');
+        } catch (e) {
+            console.error("Failed to stop server camera", e);
+        }
+
+        const container = document.getElementById('datasetGroups');
+
+        try {
+            const response = await fetch('/dataset');
+            const groups = await response.json();
+
+            container.innerHTML = '';
+
+            if (Object.keys(groups).length === 0) {
+                container.innerHTML = '<div class="empty-state">No images found</div>';
+                return;
+            }
+
+            for (const [name, files] of Object.entries(groups)) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'dataset-group';
+
+                const header = document.createElement('div');
+                header.className = 'group-header';
+                header.innerHTML = `<h4><i class="fa-solid fa-user"></i> ${name} <span class="count">${files.length} images</span></h4>`;
+
+                const grid = document.createElement('div');
+                grid.className = 'dataset-grid';
+
+                files.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'dataset-item';
+                    item.innerHTML = `<img src="/dataset/${file}" loading="lazy" alt="${file}">`;
+                    grid.appendChild(item);
+                });
+
+                groupDiv.appendChild(header);
+                groupDiv.appendChild(grid);
+                container.appendChild(groupDiv);
+            }
+        } catch (error) {
+            console.error('Error loading dataset:', error);
+            container.innerHTML = '<div class="empty-state">Error loading library</div>';
+        }
+    });
+</script>
+{% endblock %}

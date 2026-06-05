@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionReveal - Masked Face Reconstruction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-mask"></i>
+                <span>VisionReveal</span>
+            </div>
+
+            <nav class="main-nav">
+                <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}">
+                    <i class="fa-solid fa-eye"></i> Detection
+                </a>
+                <a href="/train_page" class="nav-link {% if active_page == 'train' %}active{% endif %}">
+                    <i class="fa-solid fa-brain"></i> Train Model
+                </a>
+                <a href="/dataset_page" class="nav-link {% if active_page == 'dataset' %}active{% endif %}">
+                    <i class="fa-solid fa-database"></i> Dataset Library
+                </a>
+                <a href="/photo_page" class="nav-link {% if active_page == 'photo' %}active{% endif %}">
+                    <i class="fa-solid fa-camera-retro"></i> Photo Detection
+                </a>
+            </nav>
+
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">System Active</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>
